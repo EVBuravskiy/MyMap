@@ -5,6 +5,7 @@ namespace MyMap.Maps
     public class SimpleArrayMap<TKey, TValue> : IEnumerable
     {
         private Item<TKey, TValue>[] Items;
+        private int[] Keys; 
         private int Size { get; set; }
 
         public int Count { get; private set; }
@@ -12,6 +13,7 @@ namespace MyMap.Maps
         {
             Size = size;
             Items = new Item<TKey, TValue>[Size];
+            Keys = new int[Size];
             Count = 0;
         }
 
@@ -28,6 +30,7 @@ namespace MyMap.Maps
                 {
                     Items[hash] = item;
                     Count++;
+                    Keys[hash] += 1;
                     return;
                 }
                 else
@@ -38,6 +41,7 @@ namespace MyMap.Maps
                         {
                             Items[i] = item;
                             Count++;
+                            Keys[hash] += 1;
                             return;
                         }
                         if (Items[i] != null && Items[i].Key.Equals(item.Key))
@@ -55,6 +59,7 @@ namespace MyMap.Maps
                         {
                             Items[i] = item;
                             Count++;
+                            Keys[hash] += 1;
                             return;
                         }
                     }
@@ -64,9 +69,11 @@ namespace MyMap.Maps
             {
                 Size *= 2;
                 Item<TKey, TValue>[] newItems = new Item<TKey, TValue>[Size];
+                int[] newKeys = new int[Size];
                 for (int i = 0; i < Items.Length; i++)
                 {
                     int newHash = GetHash(Items[i].Key);
+                    newKeys[newHash] = Keys[i];
                     if (newItems[newHash] == null)
                     {
                         newItems[newHash] = Items[i];
@@ -96,6 +103,7 @@ namespace MyMap.Maps
                         }
                     }
                 }
+                Keys = newKeys;
                 Items = newItems;
                 Add(item);
             }
@@ -105,6 +113,10 @@ namespace MyMap.Maps
         public TValue Get(TKey key)
         {
             int hash = GetHash(key);
+            if (Keys[hash] == 0)
+            {
+                return default(TValue);
+            }
             if (Items[hash] != null && Items[hash].Key.Equals(key))
             {
                 return Items[hash].Value;
@@ -132,24 +144,28 @@ namespace MyMap.Maps
         public void Remove(TKey key)
         {
             int hash = GetHash(key);
+            if (Items[hash] == null && Keys[hash] == 0)
+            {
+                return;
+            }
             if (Items[hash] != null && Items[hash].Key.Equals(key))
             {
                 Items[hash] = null;
+                Keys[hash] -= 1;
                 Count--;
                 return;
             }
             else
             {
-                bool deleted = false;
                 for (int i = hash + 1; i < Items.Length; i++)
                 {
                     if (Items[i] != null && Items[i].Key.Equals(key))
                     {
                         Items[i] = null;
                         Count--;
-                        deleted = true;
+                        Keys[hash] -= 1;
+                        return;
                     }
-                    if (deleted) return;
                 }
                 for (int i = 0; i < hash; i++)
                 {
@@ -157,9 +173,9 @@ namespace MyMap.Maps
                     {
                         Items[i] = null;
                         Count--;
-                        deleted = true;
+                        Keys[hash] -= 1;
+                        return;
                     }
-                    if (deleted) return;
                 }
             }
             return;
